@@ -7,10 +7,13 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Active les requêtes venant d'ailleurs (CORS)
-  app.enableCors(); 
+  // CONFIGURATION CORS ROBUSTE
+  app.enableCors({
+    origin: true, // Autorise toutes les origines (Front Vercel, Localhost, Mobile...)
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
   
-  // ⚠️ MODIFICATION ICI : On ajoute '0.0.0.0' pour écouter sur le réseau Wi-Fi
-  await app.listen(3000, '0.0.0.0');
+  await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }
 bootstrap();
