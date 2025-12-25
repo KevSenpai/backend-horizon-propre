@@ -1,3 +1,6 @@
+// 1. On force l'utilisation de l'IPv4 pour éviter l'erreur ENETUNREACH avec Supabase
+import { setDefaultResultOrder } from 'dns';
+setDefaultResultOrder('ipv4first');
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
