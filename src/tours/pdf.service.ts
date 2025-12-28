@@ -39,9 +39,9 @@ export class PdfService {
       });
     }
 
-    // 3. Pied de page
+    /// 3. Pied de page (Correction : on utilise fillColor au lieu de l'option color)
     doc.moveDown(2);
-    doc.fontSize(10).text('Généré automatiquement par Horizon Manager.', { align: 'center', color: 'grey' });
+    doc.fontSize(10).fillColor('grey').text('Généré automatiquement par Horizon Manager.', { align: 'center' });
 
     doc.end();
     return doc;

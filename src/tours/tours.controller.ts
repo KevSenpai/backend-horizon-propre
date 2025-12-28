@@ -1,10 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException } from '@nestjs/common';
 import { ToursService } from './tours.service';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
 import { Res, Header, StreamableFile } from '@nestjs/common'; // <--- Nouveaux imports
 import { PdfService } from './pdf.service'; // <--- Import service
-import { Response } from 'express'; // Pour le typage de Res
+import type { Response } from 'express';
 @Controller('tours')
 export class ToursController {
   constructor(
@@ -51,12 +51,19 @@ export class ToursController {
   async downloadPdf(@Param('id') id: string, @Res() res: Response) {
     // 1. Récupérer les données
     const tour = await this.toursService.findOne(id);
-    const tourClients = await this.toursService.getTourClients(id); // <--- ATTENTION, méthode à vérifier ci-dessous
+    
+    // CORRECTION : On vérifie si la tournée existe
+    if (!tour) {
+        throw new NotFoundException('Tournée introuvable');
+    }
+
+    // Maintenant TypeScript sait que 'tour' n'est pas null
+    const tourClients = await this.toursService.getTourClients(id);
 
     // 2. Générer le PDF
     const buffer = this.pdfService.generateTourRoadmap(tour, tourClients);
     
-    // 3. Envoyer le flux directement au navigateur
+    // 3. Envoyer le flux
     buffer.pipe(res);
   }
 }
