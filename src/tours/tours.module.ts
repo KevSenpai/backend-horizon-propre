@@ -3,14 +3,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ToursService } from './tours.service';
 import { ToursController } from './tours.controller';
 import { Tour } from './entities/tour.entity';
-// IMPORTS AJOUTÉS
 import { Client } from '../clients/entities/client.entity';
 import { TourClient } from '../tour-clients/entities/tour-client.entity';
+// 1. IMPORT DU SERVICE PDF
+import { PdfService } from './pdf.service'; 
 
 @Module({
-  // ON AJOUTE Client ET TourClient DANS LA LISTE
   imports: [TypeOrmModule.forFeature([Tour, Client, TourClient])],
   controllers: [ToursController],
-  providers: [ToursService],
+  // 2. AJOUT DANS LES PROVIDERS (C'est ce qui manquait !)
+  providers: [ToursService, PdfService], 
 })
 export class ToursModule {}
