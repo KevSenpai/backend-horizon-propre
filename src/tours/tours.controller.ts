@@ -2,10 +2,15 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { ToursService } from './tours.service';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
-
+import { Res, Header, StreamableFile } from '@nestjs/common'; // <--- Nouveaux imports
+import { PdfService } from './pdf.service'; // <--- Import service
+import { Response } from 'express'; // Pour le typage de Res
 @Controller('tours')
 export class ToursController {
-  constructor(private readonly toursService: ToursService) {}
+  constructor(
+    private readonly toursService: ToursService,
+    private readonly pdfService: PdfService
+  ) {}
 
   @Post()
   create(@Body() createTourDto: CreateTourDto) {
@@ -37,5 +42,21 @@ export class ToursController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.toursService.remove(id);
+  }
+
+   // --- NOUVEAU : TÉLÉCHARGER PDF ---
+  @Get(':id/pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename=feuille_de_route.pdf')
+  async downloadPdf(@Param('id') id: string, @Res() res: Response) {
+    // 1. Récupérer les données
+    const tour = await this.toursService.findOne(id);
+    const tourClients = await this.toursService.getTourClients(id); // <--- ATTENTION, méthode à vérifier ci-dessous
+
+    // 2. Générer le PDF
+    const buffer = this.pdfService.generateTourRoadmap(tour, tourClients);
+    
+    // 3. Envoyer le flux directement au navigateur
+    buffer.pipe(res);
   }
 }

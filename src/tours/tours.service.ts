@@ -52,6 +52,15 @@ export class ToursService {
     return this.toursRepository.delete(id);
   }
 
+  // Récupérer les clients pour le PDF
+  async getTourClients(tourId: string) {
+    return this.tourClientsRepository.find({
+      where: { tourId },
+      order: { position: 'ASC' },
+      relations: ['client'],
+    });
+  }
+
   // --- ALGORITHME DE PLANIFICATION AUTOMATIQUE ---
   // Cette méthode doit être DANS la classe, avant l'accolade fermante finale
   async autoPlanTour(tourId: string, depotLat: number = -1.6585, depotLng: number = 29.2205) {
