@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn, DeleteDateColumn } from 'typeorm';
 import type { Point } from 'geojson'; // On utilisera ce type pour le format GeoJSON
 
 export enum ClientType {
@@ -89,4 +89,7 @@ export class Client {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+   @DeleteDateColumn() // <--- AJOUTEZ CETTE LIGNE
+  deleted_at: Date;
 }

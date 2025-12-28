@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn, DeleteDateColumn } from 'typeorm';
 
 export enum TeamStatus {
   ACTIVE = 'ACTIVE',
@@ -28,4 +28,7 @@ export class Team {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+   @DeleteDateColumn() // <--- AJOUTEZ CETTE LIGNE
+  deleted_at: Date;
 }

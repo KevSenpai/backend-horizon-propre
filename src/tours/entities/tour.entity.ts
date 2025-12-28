@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique, UpdateDateColumn, DeleteDateColumn } from 'typeorm';
 import { Team } from '../../teams/entities/team.entity';
 import { Vehicle } from '../../vehicles/entities/vehicle.entity';
 
@@ -59,4 +59,7 @@ export class Tour {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+   @DeleteDateColumn() // <--- AJOUTEZ CETTE LIGNE
+  deleted_at: Date;
 }
