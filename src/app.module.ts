@@ -8,9 +8,10 @@ import { VehiclesModule } from './vehicles/vehicles.module';
 import { ClientsModule } from './clients/clients.module';
 import { ToursModule } from './tours/tours.module';
 import { TourClientsModule } from './tour-clients/tour-clients.module';
-
+import { TrackingModule } from './tracking/tracking.module';
 @Module({
   imports: [
+    
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
@@ -33,7 +34,8 @@ import { TourClientsModule } from './tour-clients/tour-clients.module';
     VehiclesModule,
     ClientsModule,
     ToursModule,
-    TourClientsModule, // <--- Le module est bien là
+    TourClientsModule, 
+    TrackingModule,// <--- Le module est bien là
   ],
   controllers: [AppController],
   providers: [AppService],
