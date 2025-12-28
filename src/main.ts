@@ -1,19 +1,22 @@
-// 1. On force l'utilisation de l'IPv4 pour éviter l'erreur ENETUNREACH avec Supabase
-import { setDefaultResultOrder } from 'dns';
-setDefaultResultOrder('ipv4first');
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+
+// Correction IPv6 pour Supabase (on garde ça)
+import { setDefaultResultOrder } from 'dns';
+setDefaultResultOrder('ipv4first');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // CONFIGURATION CORS ROBUSTE
+  // --- CONFIGURATION CORS "OPEN BAR" ---
   app.enableCors({
-    origin: true, // Autorise toutes les origines (Front Vercel, Localhost, Mobile...)
+    origin: '*', // Autorise toutes les origines (Vercel, Localhost, Mobile, etc.)
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
+    allowedHeaders: 'Content-Type, Accept, Authorization',
   });
+  // -------------------------------------
   
+  // Écoute sur le port défini par Render ou 3000 par défaut
   await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }
 bootstrap();
