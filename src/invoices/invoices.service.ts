@@ -1,26 +1,41 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
+import { Invoice } from './entities/invoice.entity';
 
 @Injectable()
 export class InvoicesService {
+  constructor(
+    @InjectRepository(Invoice)
+    private invoicesRepository: Repository<Invoice>,
+  ) {}
+
   create(createInvoiceDto: CreateInvoiceDto) {
-    return 'This action adds a new invoice';
+    const invoice = this.invoicesRepository.create(createInvoiceDto);
+    return this.invoicesRepository.save(invoice);
   }
 
   findAll() {
-    return `This action returns all invoices`;
+    return this.invoicesRepository.find({
+      relations: ['client'], // Important pour afficher le nom du client
+      order: { created_at: 'DESC' }
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} invoice`;
+  findOne(id: string) {
+    return this.invoicesRepository.findOne({
+      where: { id },
+      relations: ['client', 'payments']
+    });
   }
 
-  update(id: number, updateInvoiceDto: UpdateInvoiceDto) {
-    return `This action updates a #${id} invoice`;
+  update(id: string, updateInvoiceDto: UpdateInvoiceDto) {
+    return this.invoicesRepository.update(id, updateInvoiceDto);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} invoice`;
+  remove(id: string) {
+    return this.invoicesRepository.delete(id);
   }
 }
