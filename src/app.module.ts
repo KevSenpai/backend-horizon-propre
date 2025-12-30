@@ -9,6 +9,9 @@ import { ClientsModule } from './clients/clients.module';
 import { ToursModule } from './tours/tours.module';
 import { TourClientsModule } from './tour-clients/tour-clients.module';
 import { TrackingModule } from './tracking/tracking.module';
+import { CollectionsModule } from './collections/collections.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { PaymentsModule } from './payments/payments.module';
 @Module({
   imports: [
     
@@ -35,7 +38,7 @@ import { TrackingModule } from './tracking/tracking.module';
     ClientsModule,
     ToursModule,
     TourClientsModule, 
-    TrackingModule,// <--- Le module est bien là
+    TrackingModule, CollectionsModule, InvoicesModule, PaymentsModule,// <--- Le module est bien là
   ],
   controllers: [AppController],
   providers: [AppService],
