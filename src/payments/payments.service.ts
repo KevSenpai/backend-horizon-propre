@@ -39,4 +39,25 @@ export class PaymentsService {
   remove(id: string) {
     return this.paymentsRepository.delete(id);
   }
+ // NOUVELLE MÉTHODE : Statistiques par mois
+  async getMonthlyStats() {
+    // On utilise le QueryBuilder pour faire une agrégation SQL performante
+    const stats = await this.paymentsRepository.createQueryBuilder('payment')
+      .select("TO_CHAR(payment.payment_date, 'YYYY-MM')", 'month') // Grouper par mois (ex: 2025-12)
+      .addSelect("SUM(payment.amount)", 'total') // Somme des montants
+      .groupBy('month')
+      .orderBy('month', 'DESC') // Du plus récent au plus ancien
+      .getRawMany();
+
+    // On calcule aussi le total global
+    const totalAllTime = await this.paymentsRepository.sum('amount');
+
+    return {
+      monthly: stats.map(s => ({
+        month: s.month,
+        total: parseFloat(s.total) // PostgreSQL renvoie parfois des strings pour les sommes
+      })),
+      totalAllTime: totalAllTime || 0
+    };
+  }
 }

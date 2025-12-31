@@ -22,6 +22,15 @@ export class PaymentsController {
     return this.paymentsService.findOne(id);
   }
 
+  // ...
+  
+  @Get('stats/monthly')
+  getStats() {
+    return this.paymentsService.getMonthlyStats();
+  }
+
+  // ... (Garder les autres méthodes @Post, @Get findAll, etc.)
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
     return this.paymentsService.update(id, updatePaymentDto);
