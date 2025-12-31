@@ -7,6 +7,14 @@ import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 export class InvoicesController {
   constructor(private readonly invoicesService: InvoicesService) {}
 
+  // ... imports existants ...
+
+  @Post('generate-monthly')
+  generateMonthly() {
+    return this.invoicesService.generateMonthlyInvoices();
+  }
+
+  // ... (reste des méthodes)
   @Post()
   create(@Body() createInvoiceDto: CreateInvoiceDto) {
     return this.invoicesService.create(createInvoiceDto);
