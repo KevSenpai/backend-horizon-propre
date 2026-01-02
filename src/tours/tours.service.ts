@@ -71,12 +71,35 @@ export class ToursService {
     const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
     const dayName = days[date.getDay()];
 
+    // ... dans autoPlanTour ...
+
     // Trouver les candidats
+    // Critères :
+    // 1. Bon jour de collecte
+    // 2. Actif
+    // 3. Localisation vérifiée
+    // 4. PAS DÉJÀ DANS UNE TOURNÉE CE JOUR-LÀ (Nouveau critère)
+    
     const candidates = await this.clientsRepository.createQueryBuilder('client')
       .where(':day = ANY(client.collection_days)', { day: dayName })
       .andWhere('client.status = :status', { status: 'ACTIVE' })
       .andWhere('client.location_status = :geoStatus', { geoStatus: 'VERIFIED' })
+      // Sous-requête pour exclure les clients déjà pris le même jour
+      .andWhere(qb => {
+        const subQuery = qb.subQuery()
+          .select('tc.client_id')
+          .from(TourClient, 'tc')
+          .innerJoin('tc.tour', 't')
+          .where('t.tour_date = :targetDate') // Même date que la tournée actuelle
+          .andWhere('t.id != :currentTourId') // Sauf si c'est la tournée qu'on modifie nous-même
+          .getQuery();
+        return 'client.id NOT IN ' + subQuery;
+      })
+      .setParameter('targetDate', tour.tour_date)
+      .setParameter('currentTourId', tourId)
       .getMany();
+      
+    // ... suite de l'algorithme inchangée ...
 
     // Algorithme Nearest Neighbor
     let currentLat = depotLat;
