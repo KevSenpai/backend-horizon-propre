@@ -9,16 +9,22 @@ export class TeamsController {
 
   @Post()
   create(@Body() createTeamDto: CreateTeamDto) {
-    // Appel au service pour créer
     return this.teamsService.create(createTeamDto);
   }
 
+  // --- PLACEZ "AVAILABLE" EN PREMIER ---
+  @Get('available')
+  findAvailable(@Query('date') date: string) {
+    return this.teamsService.findAvailable(date);
+  }
+  // -------------------------------------
+
   @Get()
   findAll() {
-    // Appel au service pour tout récupérer
     return this.teamsService.findAll();
   }
 
+  // --- PLACEZ ":id" APRÈS ---
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.teamsService.findOne(id);
@@ -32,10 +38,5 @@ export class TeamsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.teamsService.remove(id);
-  }
-
-  @Get('available')
-  findAvailable(@Query('date') date: string) {
-    return this.teamsService.findAvailable(date);
   }
 }
