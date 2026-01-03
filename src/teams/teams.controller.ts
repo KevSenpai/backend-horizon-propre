@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
-
+import { Query } from '@nestjs/common';
 @Controller('teams')
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
@@ -32,5 +32,10 @@ export class TeamsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.teamsService.remove(id);
+  }
+
+  @Get('available')
+  findAvailable(@Query('date') date: string) {
+    return this.teamsService.findAvailable(date);
   }
 }

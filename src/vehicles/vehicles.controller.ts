@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
-
+import { Query } from '@nestjs/common';
 @Controller('vehicles')
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
@@ -20,6 +20,11 @@ export class VehiclesController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.vehiclesService.findOne(id);
+  }
+
+  @Get('available')
+  findAvailable(@Query('date') date: string) {
+    return this.vehiclesService.findAvailable(date);
   }
 
   @Patch(':id')

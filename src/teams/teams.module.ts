@@ -3,9 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TeamsService } from './teams.service';
 import { TeamsController } from './teams.controller';
 import { Team } from './entities/team.entity';
+import { Tour } from '../tours/entities/tour.entity'; // <--- IMPORT
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Team])], // <--- C'est CECI qui injecte l'entité dans le service
+  imports: [TypeOrmModule.forFeature([Team, Tour])], // <--- AJOUT DE TOUR
   controllers: [TeamsController],
   providers: [TeamsService],
 })

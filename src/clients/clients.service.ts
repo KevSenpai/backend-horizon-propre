@@ -4,13 +4,33 @@ import { Repository } from 'typeorm';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { Client } from './entities/client.entity';
-
+import { Tour } from '../tours/entities/tour.entity';
 @Injectable()
 export class ClientsService {
   constructor(
     @InjectRepository(Client)
     private clientsRepository: Repository<Client>,
+    @InjectRepository(Tour) private toursRepository: Repository<Tour>,
   ) {}
+
+  // ... injections de Client, Tour, TourClient ...
+
+  async findAvailableForDate(date: string) {
+    // Sous-requête pour trouver les clients dans une tournée à cette date
+    // Note: C'est une requête un peu complexe, on va utiliser le QueryBuilder
+    return this.clientsRepository.createQueryBuilder('client')
+      .where('client.status = :status', { status: 'ACTIVE' })
+      .andWhere(qb => {
+        const subQuery = qb.subQuery()
+          .select('tc.client_id')
+          .from('tour_clients', 'tc')
+          .innerJoin('tours', 't', 't.id = tc.tour_id')
+          .where('t.tour_date = :date', { date })
+          .getQuery();
+        return 'client.id NOT IN ' + subQuery;
+      })
+      .getMany();
+  }
 
   async create(createClientDto: CreateClientDto) {
     // 1. Préparer l'entité
