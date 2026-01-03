@@ -6,7 +6,7 @@ import { Team } from './entities/team.entity';
 import { Tour } from '../tours/entities/tour.entity'; // <--- IMPORT
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Team, Tour])], // <--- AJOUT DE TOUR
+  imports: [TypeOrmModule.forFeature([Team])], // <--- AJOUT DE TOUR
   controllers: [TeamsController],
   providers: [TeamsService],
 })

@@ -4,43 +4,40 @@ import { Repository } from 'typeorm';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { Team } from './entities/team.entity';
-import { Tour } from '../tours/entities/tour.entity';
+// Note: On retire l'import de Tour et TourRepository, on n'en a plus besoin ici !
+
 @Injectable()
 export class TeamsService {
   constructor(
-    @InjectRepository(Team) private teamsRepository: Repository<Team>,
-    @InjectRepository(Tour) private toursRepository: Repository<Tour>, // <--- Injection
+    @InjectRepository(Team)
+    private teamsRepository: Repository<Team>,
   ) {}
 
-   // Trouver les équipes disponibles pour une date donnée
+  // --- VERSION CORRIGÉE ET OPTIMISÉE ---
   async findAvailable(date: string) {
-    // 1. Trouver les IDs des équipes occupées ce jour-là
-    const busyTours = await this.toursRepository.find({
-      where: { tour_date: date },
-      select: ['team_id']
-    });
-    const busyTeamIds = busyTours.map(t => t.team_id).filter(id => id !== null);
-
-    // 2. Construire la requête
-    const query = this.teamsRepository.createQueryBuilder('team')
-      .where('team.status = :status', { status: 'ACTIVE' });
-
-    // 3. Exclure les occupés (si il y en a)
-    if (busyTeamIds.length > 0) {
-      query.andWhere('team.id NOT IN (:...ids)', { ids: busyTeamIds });
-    }
-
-    return query.getMany();
+    return this.teamsRepository.createQueryBuilder('team')
+      .where('team.status = :status', { status: 'ACTIVE' })
+      .andWhere(qb => {
+        // Sous-requête : "Sélectionne les IDs des équipes qui sont dans la table tours à cette date"
+        const subQuery = qb.subQuery()
+          .select('tour.team_id')
+          .from('tours', 'tour') // On utilise le nom de la table SQL 'tours'
+          .where('tour.tour_date = :date', { date })
+          .getQuery();
+        
+        // Clause principale : "L'ID de l'équipe ne doit PAS être dans la sous-requête"
+        return 'team.id NOT IN ' + subQuery;
+      })
+      .getMany();
   }
+  // -------------------------------------
 
   create(createTeamDto: CreateTeamDto) {
-    // Crée une nouvelle instance d'équipe et la sauvegarde
     const team = this.teamsRepository.create(createTeamDto);
     return this.teamsRepository.save(team);
   }
 
   findAll() {
-    // Récupère toutes les équipes
     return this.teamsRepository.find();
   }
 
@@ -53,6 +50,6 @@ export class TeamsService {
   }
 
   remove(id: string) {
-    return this.teamsRepository.delete(id);
+    return this.teamsRepository.softDelete(id); // Utilisation du Soft Delete
   }
 }
