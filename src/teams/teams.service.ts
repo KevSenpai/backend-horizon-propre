@@ -13,19 +13,19 @@ export class TeamsService {
     private teamsRepository: Repository<Team>,
   ) {}
 
-  // --- VERSION CORRIGÉE ET OPTIMISÉE ---
+  // --- VERSION CORRIGÉE ET OPTIMISÉE (SOUS-REQUÊTE) ---
   async findAvailable(date: string) {
     return this.teamsRepository.createQueryBuilder('team')
       .where('team.status = :status', { status: 'ACTIVE' })
       .andWhere(qb => {
-        // Sous-requête : "Sélectionne les IDs des équipes qui sont dans la table tours à cette date"
+        // Sous-requête : "Sélectionne les IDs des équipes qui sont dans la table 'tours' à cette date"
         const subQuery = qb.subQuery()
           .select('tour.team_id')
-          .from('tours', 'tour') // On utilise le nom de la table SQL 'tours'
+          .from('tours', 'tour') // 'tours' est le nom de la table dans la BDD
           .where('tour.tour_date = :date', { date })
           .getQuery();
         
-        // Clause principale : "L'ID de l'équipe ne doit PAS être dans la sous-requête"
+        // Clause principale : "L'ID de l'équipe ne doit PAS être dans la liste des occupés"
         return 'team.id NOT IN ' + subQuery;
       })
       .getMany();
@@ -50,6 +50,6 @@ export class TeamsService {
   }
 
   remove(id: string) {
-    return this.teamsRepository.softDelete(id); // Utilisation du Soft Delete
+    return this.teamsRepository.softDelete(id);
   }
 }
