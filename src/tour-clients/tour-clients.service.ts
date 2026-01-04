@@ -4,20 +4,21 @@ import { Repository } from 'typeorm';
 import { CreateTourClientDto } from './dto/create-tour-client.dto';
 import { TourClient } from './entities/tour-client.entity';
 import { Tour } from '../tours/entities/tour.entity';
-import { Collection } from '../collections/entities/collection.entity'; // <--- INJECTION
+import { Collection } from '../collections/entities/collection.entity';
+
 @Injectable()
 export class TourClientsService {
   constructor(
     @InjectRepository(TourClient) private repo: Repository<TourClient>,
     @InjectRepository(Tour) private toursRepository: Repository<Tour>,
-    @InjectRepository(Collection) private collectionsRepository: Repository<Collection>, // <--- INJECTION
+    @InjectRepository(Collection) private collectionsRepository: Repository<Collection>,
   ) {}
 
+  // 1. AJOUTER UN CLIENT (Avec vérification de conflit de date)
   async create(dto: CreateTourClientDto) {
     const targetTour = await this.toursRepository.findOneBy({ id: dto.tourId });
     if (!targetTour) throw new NotFoundException("Tournée introuvable");
 
-    // Vérif conflit date
     const existingConflict = await this.repo.createQueryBuilder('tc')
       .innerJoin('tc.tour', 'tour')
       .where('tc.client_id = :clientId', { clientId: dto.clientId })
@@ -32,30 +33,35 @@ export class TourClientsService {
     return this.repo.save(link);
   }
 
+  // 2. RÉCUPÉRER LA LISTE (Avec statut COMPLETED/PENDING)
   async findAllByTour(tourId: string) {
-    // 1. Récupérer la liste des clients prévus
+    // a. Liste prévue
     const tourClients = await this.repo.find({
       where: { tourId },
       order: { position: 'ASC' },
       relations: ['client'], 
     });
 
-    // 2. Récupérer les collectes DÉJÀ FAITES pour cette tournée
+    // b. Liste réalisée
     const completedCollections = await this.collectionsRepository.find({
       where: { tour_id: tourId }
     });
 
-    // 3. Créer un Set des IDs clients déjà collectés pour une recherche rapide
+    // c. Fusion
     const collectedClientIds = new Set(completedCollections.map(c => c.client_id));
 
-    // 4. Fusionner les infos : on ajoute le statut 'COMPLETED' si trouvé
     return tourClients.map(tc => ({
       ...tc,
-      // Si l'ID du client est dans la liste des collectés, le statut est COMPLETED
       status: collectedClientIds.has(tc.clientId) ? 'COMPLETED' : 'PENDING'
     }));
   }
-  // Méthodes standards
+
+  // 3. RETIRER UN CLIENT (C'est la méthode qui manquait !)
+  async removeClientFromTour(tourId: string, clientId: string) {
+    return this.repo.delete({ tourId, clientId });
+  }
+
+  // Méthodes standards (placeholders)
   findAll() { return this.repo.find(); }
   findOne(id: number) { return `Not implemented`; }
   update(id: number, updateDto: any) { return `Not implemented`; }
