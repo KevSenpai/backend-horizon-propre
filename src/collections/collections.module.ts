@@ -3,10 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CollectionsService } from './collections.service';
 import { CollectionsController } from './collections.controller';
 import { Collection } from './entities/collection.entity';
+// AJOUTS IMPORTS
+import { Tour } from '../tours/entities/tour.entity';
+import { TourClient } from '../tour-clients/entities/tour-client.entity';
 
 @Module({
-  // C'est cette ligne qui manquait pour que le Service puisse accéder à la Base de données :
-  imports: [TypeOrmModule.forFeature([Collection])], 
+  // AJOUTER Tour ET TourClient DANS LA LISTE
+  imports: [TypeOrmModule.forFeature([Collection, Tour, TourClient])], 
   controllers: [CollectionsController],
   providers: [CollectionsService],
 })
