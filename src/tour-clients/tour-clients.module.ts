@@ -3,10 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TourClientsService } from './tour-clients.service';
 import { TourClientsController } from './tour-clients.controller';
 import { TourClient } from './entities/tour-client.entity';
-import { Tour } from '../tours/entities/tour.entity'; // <--- AJOUT
+import { Tour } from '../tours/entities/tour.entity';
+import { Collection } from '../collections/entities/collection.entity'; // <--- AJOUT IMPORT
 
 @Module({
-  imports: [TypeOrmModule.forFeature([TourClient, Tour])], // <--- AJOUTER Tour ICI
+  // AJOUTER Collection DANS LA LISTE
+  imports: [TypeOrmModule.forFeature([TourClient, Tour, Collection])], 
   controllers: [TourClientsController],
   providers: [TourClientsService],
 })
