@@ -83,6 +83,8 @@ export class Client {
 
   @Column({ default: 'ACTIVE' })
   status: string;
+  @Column({ type: 'date', nullable: true })
+  last_collected_at: Date | null;
 
   @CreateDateColumn()
   created_at: Date;

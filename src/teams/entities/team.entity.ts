@@ -23,6 +23,9 @@ export class Team {
   })
   status: TeamStatus;
 
+  @Column({ type: 'int', default: 20 }) 
+  capacity: number;
+
   @CreateDateColumn()
   created_at: Date;
 

@@ -63,97 +63,102 @@ export class ToursService {
 
   // --- ALGORITHME DE PLANIFICATION AUTOMATIQUE ---
   // Cette méthode doit être DANS la classe, avant l'accolade fermante finale
-  async autoPlanTour(tourId: string, depotLat: number = -1.6585, depotLng: number = 29.2205) {
-    const tour = await this.findOne(tourId);
-    if (!tour) throw new NotFoundException('Tournée introuvable');
+ // --- NOUVEL ALGORITHME : CAPACITÉ & PRIORITÉ ---
+  async autoPlanTour(tourId: string) {
+    // 1. Initialiser la Transaction (Tout ou Rien)
+    const queryRunner = this.toursRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    const date = new Date(tour.tour_date);
-    const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-    const dayName = days[date.getDay()];
+    try {
+      // --- ÉTAPE 1 : VERROUILLER LE CONTEXTE ---
+      // On récupère la tournée avec son Équipe et son Véhicule
+      const tour = await queryRunner.manager.findOne(Tour, {
+        where: { id: tourId },
+        relations: ['team', 'vehicle']
+      });
 
-    // ... dans autoPlanTour ...
+      if (!tour) throw new NotFoundException('Tournée introuvable');
+      if (tour.status !== 'DRAFT') throw new ConflictException('La tournée doit être en brouillon');
 
-    // Trouver les candidats
-    // Critères :
-    // 1. Bon jour de collecte
-    // 2. Actif
-    // 3. Localisation vérifiée
-    // 4. PAS DÉJÀ DANS UNE TOURNÉE CE JOUR-LÀ (Nouveau critère)
-    
-    const candidates = await this.clientsRepository.createQueryBuilder('client')
-      .where(':day = ANY(client.collection_days)', { day: dayName })
-      .andWhere('client.status = :status', { status: 'ACTIVE' })
-      .andWhere('client.location_status = :geoStatus', { geoStatus: 'VERIFIED' })
-      // Sous-requête pour exclure les clients déjà pris le même jour
-      .andWhere(qb => {
-        const subQuery = qb.subQuery()
-          .select('tc.client_id')
-          .from(TourClient, 'tc')
-          .innerJoin('tc.tour', 't')
-          .where('t.tour_date = :targetDate') // Même date que la tournée actuelle
-          .andWhere('t.id != :currentTourId') // Sauf si c'est la tournée qu'on modifie nous-même
-          .getQuery();
-        return 'client.id NOT IN ' + subQuery;
-      })
-      .setParameter('targetDate', tour.tour_date)
-      .setParameter('currentTourId', tourId)
-      .getMany();
-      
-    // ... suite de l'algorithme inchangée ...
+      // --- ÉTAPE 2 : CALCULER LA CAPACITÉ RÉELLE ---
+      // La chaîne est aussi forte que son maillon le plus faible
+      const teamCap = tour.team.capacity || 20; // Valeur par défaut si non définie
+      const vehicleCap = tour.vehicle.capacity || 20;
+      const realCapacity = Math.min(teamCap, vehicleCap);
 
-    // Algorithme Nearest Neighbor
-    let currentLat = depotLat;
-    let currentLng = depotLng;
-    let unvisited = [...candidates];
-    const orderedClients: Client[] = [];
+      console.log(`Planification Tournée ${tour.name} - Capacité cible : ${realCapacity}`);
 
-    while (unvisited.length > 0) {
-      let nearestIndex = -1;
-      let minDistance = Infinity;
+      // --- ÉTAPE 3 : FILTRER LES CLIENTS ÉLIGIBLES ---
+      // Jour de la semaine (ex: 'MONDAY')
+      const date = new Date(tour.tour_date);
+      const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+      const dayName = days[date.getDay()];
 
-      for (let i = 0; i < unvisited.length; i++) {
-        const c = unvisited[i];
-        // Cast en any pour accéder aux propriétés GeoJSON sans erreur de typage stricte
-        const loc: any = c.location; 
-        // Vérification de sécurité si loc est null
-        if (!loc || !loc.coordinates) continue; 
+      const clientsQuery = this.clientsRepository.createQueryBuilder('client')
+        // Règle : Client Actif
+        .where('client.status = :status', { status: 'ACTIVE' })
+        // Règle : Doit être collecté ce jour-là (Selon contrat)
+        .andWhere(':day = ANY(client.collection_days)', { day: dayName })
+        // Règle : PAS déjà planifié ce jour-là (dans une autre tournée)
+        .andWhere(qb => {
+            const subQuery = qb.subQuery()
+              .select('tc.client_id')
+              .from('tour_clients', 'tc')
+              .innerJoin('tours', 't', 't.id = tc.tour_id')
+              .where('t.tour_date = :date', { date: tour.tour_date })
+              .andWhere('t.id != :currentTourId', { currentTourId: tourId }) // On exclut la tournée actuelle
+              .getQuery();
+            return 'client.id NOT IN ' + subQuery;
+        });
 
-        const cLat = loc.coordinates[0]; 
-        const cLng = loc.coordinates[1];
+      // --- ÉTAPE 4 : PRIORISER (TRI) ---
+      // Ordre : 
+      // 1. Ceux qui n'ont jamais été collectés (NULL) ou les plus anciens (ASC) -> Les "En retard"
+      // 2. Ensuite, on pourrait trier par Type de client si besoin, mais la date prime.
+      clientsQuery.orderBy('client.last_collected_at', 'ASC', 'NULLS FIRST');
 
-        const dist = Math.sqrt(Math.pow(cLat - currentLat, 2) + Math.pow(cLng - currentLng, 2));
-        
-        if (dist < minDistance) {
-          minDistance = dist;
-          nearestIndex = i;
-        }
+      // --- ÉTAPE 5 : REMPLIR (LIMITE) ---
+      const selectedClients = await clientsQuery.take(realCapacity).getMany();
+
+      if (selectedClients.length === 0) {
+        throw new ConflictException("Aucun client éligible trouvé pour cette date/zone.");
       }
 
-      if (nearestIndex === -1) break; // Sécurité si aucun client valide
-
-      const nearest = unvisited[nearestIndex];
-      orderedClients.push(nearest);
+      // --- ÉTAPE 6 : AFFECTATION ATOMIQUE ---
       
-      const nearestLoc: any = nearest.location;
-      currentLat = nearestLoc.coordinates[0];
-      currentLng = nearestLoc.coordinates[1];
-      
-      unvisited.splice(nearestIndex, 1);
-    }
+      // A. Vider la tournée actuelle (au cas où on relance l'algo)
+      await queryRunner.manager.delete(TourClient, { tourId: tour.id });
 
-    // Sauvegarde
-    await this.tourClientsRepository.delete({ tourId });
-
-    const tourClientsToSave = orderedClients.map((client, index) => {
-      return this.tourClientsRepository.create({
-        tourId: tour.id,
-        clientId: client.id,
-        position: index + 1
+      // B. Créer les liens
+      const tourClients = selectedClients.map((client, index) => {
+        return queryRunner.manager.create(TourClient, {
+          tourId: tour.id,
+          clientId: client.id,
+          position: index + 1 // Ordre simple 1, 2, 3...
+        });
       });
-    });
 
-    await this.tourClientsRepository.save(tourClientsToSave);
+      // C. Sauvegarder en masse
+      await queryRunner.manager.save(TourClient, tourClients);
 
-    return { message: 'Planification automatique terminée', count: orderedClients.length };
+      // Tout est bon, on valide la transaction
+      await queryRunner.commitTransaction();
+
+      return { 
+        message: 'Planification terminée', 
+        capacity: realCapacity,
+        added: selectedClients.length,
+        clients: selectedClients.map(c => c.name)
+      };
+
+    } catch (err) {
+      // En cas de pépin, on annule tout (Rollback)
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      // On libère la connexion
+      await queryRunner.release();
+    }
   }
 }

@@ -23,6 +23,9 @@ export class Vehicle {
   })
   status: VehicleStatus;
 
+  @Column({ type: 'int', default: 30 }) 
+  capacity: number;
+
   @CreateDateColumn()
   created_at: Date;
 

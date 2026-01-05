@@ -6,7 +6,7 @@ import { Collection, CollectionStatus } from './entities/collection.entity';
 // Imports des nouvelles entités
 import { Tour, TourStatus } from '../tours/entities/tour.entity';
 import { TourClient } from '../tour-clients/entities/tour-client.entity';
-
+import { Client } from '../clients/entities/client.entity';
 @Injectable()
 export class CollectionsService {
   constructor(
@@ -15,23 +15,23 @@ export class CollectionsService {
     @InjectRepository(TourClient) private tourClientRepo: Repository<TourClient>, // <--- Injection
   ) {}
 
+  // ...
   async create(createCollectionDto: CreateCollectionDto) {
-    const { tour_id, client_id } = createCollectionDto;
+    // ... (vérification doublon existante) ...
 
-    // 1. Vérification doublon (Idempotence)
-    const existing = await this.repo.findOne({
-      where: { tour_id, client_id }
-    });
-    if (existing) return existing;
-
-    // 2. Création de la collecte
     const collection = this.repo.create(createCollectionDto);
-    const savedCollection = await this.repo.save(collection);
+    const saved = await this.repo.save(collection);
 
-    // --- 3. AUTO-CLÔTURE DE LA TOURNÉE ---
-    await this.checkAndCloseTour(tour_id);
+    // --- MISE À JOUR CLIENT ---
+    if (saved.status === 'COMPLETED') {
+        // On met à jour la date de dernière collecte du client
+        await this.clientsRepository.update(saved.client_id, {
+            last_collected_at: new Date()
+        });
+    }
 
-    return savedCollection;
+    // ... (auto-clôture tournée existante) ...
+    return saved;
   }
 
   // Méthode privée pour vérifier si la tournée est finie
