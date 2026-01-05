@@ -1,8 +1,11 @@
 import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
 import { TourClientsService } from './tour-clients.service';
 import { CreateTourClientDto } from './dto/create-tour-client.dto';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('tour-clients')
+@UseGuards(JwtAuthGuard)
 export class TourClientsController {
   constructor(private readonly service: TourClientsService) {}
 

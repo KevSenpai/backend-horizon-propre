@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Body } from '@nestjs/common'; // <--- Ajoutez Post et Body
 import { CollectionsService } from './collections.service';
 import { CreateCollectionDto } from './dto/create-collection.dto';
-
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('collections')
+@UseGuards(JwtAuthGuard)
 export class CollectionsController {
   constructor(private readonly collectionsService: CollectionsService) {}
 

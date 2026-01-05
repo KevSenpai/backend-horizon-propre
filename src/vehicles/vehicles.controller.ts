@@ -2,8 +2,10 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestj
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
-
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('vehicles')
+@UseGuards(JwtAuthGuard)
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 

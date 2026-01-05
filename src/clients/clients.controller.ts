@@ -3,7 +3,10 @@ import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { Query } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('clients')
+@UseGuards(JwtAuthGuard)
 export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
 

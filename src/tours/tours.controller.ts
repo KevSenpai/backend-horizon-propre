@@ -5,7 +5,10 @@ import { UpdateTourDto } from './dto/update-tour.dto';
 import { Res, Header, StreamableFile } from '@nestjs/common'; // <--- Nouveaux imports
 import { PdfService } from './pdf.service'; // <--- Import service
 import type { Response } from 'express';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('tours')
+@UseGuards(JwtAuthGuard)
 export class ToursController {
   constructor(
     private readonly toursService: ToursService,
