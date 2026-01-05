@@ -12,7 +12,8 @@ export class CollectionsService {
   constructor(
     @InjectRepository(Collection) private repo: Repository<Collection>,
     @InjectRepository(Tour) private tourRepo: Repository<Tour>, // <--- Injection
-    @InjectRepository(TourClient) private tourClientRepo: Repository<TourClient>, // <--- Injection
+    @InjectRepository(TourClient) private tourClientRepo: Repository<TourClient>, 
+     @InjectRepository(Client) private clientsRepository: Repository<Client>,// <--- Injection
   ) {}
 
   // ...
