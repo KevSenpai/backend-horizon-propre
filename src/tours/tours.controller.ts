@@ -20,6 +20,11 @@ export class ToursController {
     return this.toursService.create(createTourDto);
   }
 
+  @Post('close-expired')
+  closeExpired() {
+    return this.toursService.closeExpiredTours();
+  }
+
   // --- LE NOUVEAU ENDPOINT MAGIQUE ---
   @Post(':id/auto-plan')
   autoPlan(@Param('id') id: string) {

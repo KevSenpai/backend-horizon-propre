@@ -5,6 +5,7 @@ import { Tour } from '../../tours/entities/tour.entity';
 export enum CollectionStatus {
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
+  MISSED = 'MISSED',
 }
 
 @Entity('collections')

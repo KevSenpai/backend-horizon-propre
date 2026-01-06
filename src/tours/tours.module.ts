@@ -9,7 +9,8 @@ import { TourClient } from '../tour-clients/entities/tour-client.entity';
 import { PdfService } from './pdf.service'; 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Tour, Client, TourClient])],
+  imports: [TypeOrmModule.forFeature([Tour, Client, TourClient, Collection])], // <--- AJOUT Collection
+  // ...
   controllers: [ToursController],
   // 2. AJOUT DANS LES PROVIDERS (C'est ce qui manquait !)
   providers: [ToursService, PdfService], 

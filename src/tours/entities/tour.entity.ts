@@ -8,6 +8,7 @@ export enum TourStatus {
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
+  UNFINISHED = 'UNFINISHED',
 }
 
 @Entity('tours')

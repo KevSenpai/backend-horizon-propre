@@ -6,14 +6,24 @@ import { UpdateTourDto } from './dto/update-tour.dto';
 import { Tour } from './entities/tour.entity';
 import { Client } from '../clients/entities/client.entity';
 import { TourClient } from '../tour-clients/entities/tour-client.entity';
-
+import { LessThan, Not, In } from 'typeorm';
+import { Collection, CollectionStatus } from '../collections/entities/collection.entity';
+import { TourStatus } from './entities/tour.entity';
+import { Cron, CronExpression } from '@nestjs/schedule';
 @Injectable()
 export class ToursService {
   constructor(
     @InjectRepository(Tour) private toursRepository: Repository<Tour>,
     @InjectRepository(Client) private clientsRepository: Repository<Client>,
     @InjectRepository(TourClient) private tourClientsRepository: Repository<TourClient>,
+    @InjectRepository(Collection) private collectionsRepository: Repository<Collection>,
   ) {}
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleCron() {
+    console.log('🔄 Lancement du nettoyage des tournées expirées...');
+    await this.closeExpiredTours();
+  }
 
   async create(createTourDto: CreateTourDto) {
     const dateStr = createTourDto.tour_date.toString().replace(/-/g, '');
@@ -160,5 +170,53 @@ export class ToursService {
       // On libère la connexion
       await queryRunner.release();
     }
+  }
+  
+  // --- LOGIQUE DE CLÔTURE AUTOMATIQUE ---
+  async closeExpiredTours() {
+    const today = new Date().toISOString().split('T')[0];
+
+    // 1. Trouver les tournées "périmées" (Date < Aujourd'hui ET Statut pas fini)
+    const expiredTours = await this.toursRepository.find({
+      where: {
+        tour_date: LessThan(today), // Strictement avant aujourd'hui
+        status: In([TourStatus.PLANNED, TourStatus.IN_PROGRESS]), // Qui sont encore ouvertes
+      }
+    });
+
+    let processedCount = 0;
+
+    for (const tour of expiredTours) {
+      // 2. Pour chaque tournée, trouver les clients prévus
+      const scheduled = await this.tourClientsRepository.find({ where: { tourId: tour.id } });
+      
+      // 3. Trouver les collectes déjà enregistrées (Succès ou Échec)
+      const collected = await this.collectionsRepository.find({ where: { tour_id: tour.id } });
+      const collectedClientIds = new Set(collected.map(c => c.client_id));
+
+      // 4. Identifier les oubliés
+      const missingClients = scheduled.filter(item => !collectedClientIds.has(item.clientId));
+
+      // 5. Créer une entrée "MISSED" pour chaque oublié
+      for (const missing of missingClients) {
+        await this.collectionsRepository.save(
+          this.collectionsRepository.create({
+            tour_id: tour.id,
+            client_id: missing.clientId,
+            status: CollectionStatus.MISSED,
+            reason_if_failed: 'Tournée non finalisée (Clôture auto)',
+            collected_at: new Date(tour.tour_date) // On date ça du jour de la tournée
+          })
+        );
+      }
+
+      // 6. Marquer la tournée comme "NON TERMINÉE"
+      tour.status = TourStatus.UNFINISHED;
+      await this.toursRepository.save(tour);
+      
+      processedCount++;
+    }
+
+    return { message: `${processedCount} tournées clôturées automatiquement.` };
   }
 }

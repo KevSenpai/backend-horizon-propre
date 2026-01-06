@@ -14,8 +14,12 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { ScheduleModule } from '@nestjs/schedule'; // <--- Import
+
 @Module({
   imports: [
+    ScheduleModule.forRoot(), // <--- AJOUTER ICI
+    // ...
     
     ConfigModule.forRoot({
       isGlobal: true,
