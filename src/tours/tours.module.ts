@@ -5,14 +5,14 @@ import { ToursController } from './tours.controller';
 import { Tour } from './entities/tour.entity';
 import { Client } from '../clients/entities/client.entity';
 import { TourClient } from '../tour-clients/entities/tour-client.entity';
-// 1. IMPORT DU SERVICE PDF
-import { PdfService } from './pdf.service'; 
+import { PdfService } from './pdf.service';
+// 👇 C'EST L'IMPORT QUI MANQUAIT :
+import { Collection } from '../collections/entities/collection.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Tour, Client, TourClient, Collection])], // <--- AJOUT Collection
-  // ...
+  // On enregistre toutes les entités nécessaires
+  imports: [TypeOrmModule.forFeature([Tour, Client, TourClient, Collection])],
   controllers: [ToursController],
-  // 2. AJOUT DANS LES PROVIDERS (C'est ce qui manquait !)
-  providers: [ToursService, PdfService], 
+  providers: [ToursService, PdfService],
 })
 export class ToursModule {}
