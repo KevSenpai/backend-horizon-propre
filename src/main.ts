@@ -12,13 +12,17 @@ async function bootstrap() {
   // ...
   // ...
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, // Garde les champs déclarés
-    forbidNonWhitelisted: false, // <--- IMPORTANT : Ne pas planter si un champ inconnu est envoyé
-    transform: true, // Convertir les types (string -> number, etc.)
+    whitelist: true, // Garde les champs déclarés dans le DTO...
+    forbidNonWhitelisted: false, // <--- METTRE A FALSE (C'est la clé !)
+    transform: true,
     transformOptions: {
-      enableImplicitConversion: true, // <--- IMPORTANT : Aider à la conversion
+      enableImplicitConversion: true,
     },
-    disableErrorMessages: false, // On veut voir les erreurs
+    // Ajoutons ceci pour voir les erreurs de validation dans la réponse HTTP si ça plante encore
+    exceptionFactory: (errors) => {
+        console.error("Validation Errors:", errors);
+        return new Error("Validation failed"); // ou laissez le défaut
+    }
   }));
 // ...
 
