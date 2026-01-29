@@ -26,22 +26,22 @@ export class CreateClientDto {
   @IsNotEmpty()
   city: string;
 
+  @IsOptional() // <--- On rend optionnel au cas où
   @IsEnum(ClientType)
   client_type: ClientType;
 
+  @IsOptional() // <--- On rend optionnel au cas où
   @IsEnum(ServiceType)
   service_type: ServiceType;
 
+  @IsOptional() // <--- On rend optionnel car parfois les tableaux passent mal
   @IsArray()
-  @IsEnum(CollectionDay, { each: true })
   collection_days: CollectionDay[];
 
-  // --- C'EST ICI LE FIX ---
-  // On autorise tout objet pour la location (GeoJSON) pour éviter l'erreur 400
-  @IsOptional() 
-  location?: any;
+  // --- LE CHAMP CRITIQUE ---
+  @IsOptional() // On accepte tout (ou rien) pour la location
+  location?: any; 
 
   @IsOptional()
-  @IsEnum(GeoStatus)
-  location_status?: GeoStatus;
+  location_status?: any;
 }

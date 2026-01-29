@@ -10,13 +10,15 @@ async function bootstrap() {
 
   // Validation Globale
   // ...
+  // ...
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, // Garde uniquement les champs déclarés dans le DTO
-    forbidNonWhitelisted: false, // <--- METTRE A FALSE (C'est souvent 'true' qui cause l'erreur 400)
-    transform: true,
+    whitelist: true, // Garde les champs déclarés
+    forbidNonWhitelisted: false, // <--- IMPORTANT : Ne pas planter si un champ inconnu est envoyé
+    transform: true, // Convertir les types (string -> number, etc.)
     transformOptions: {
-      enableImplicitConversion: true,
+      enableImplicitConversion: true, // <--- IMPORTANT : Aider à la conversion
     },
+    disableErrorMessages: false, // On veut voir les erreurs
   }));
 // ...
 
