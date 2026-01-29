@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsNotEmpty, IsEnum, IsArray, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsArray, IsOptional, IsEmail } from 'class-validator';
 import { ClientType, ServiceType, CollectionDay, GeoStatus } from '../entities/client.entity';
 
 export class CreateClientDto {
@@ -36,8 +36,10 @@ export class CreateClientDto {
   @IsEnum(CollectionDay, { each: true })
   collection_days: CollectionDay[];
 
-  @IsOptional()
-  location?: any; // On peut affiner avec un DTO spécifique pour GeoJSON plus tard
+  // --- C'EST ICI LE FIX ---
+  // On autorise tout objet pour la location (GeoJSON) pour éviter l'erreur 400
+  @IsOptional() 
+  location?: any;
 
   @IsOptional()
   @IsEnum(GeoStatus)
