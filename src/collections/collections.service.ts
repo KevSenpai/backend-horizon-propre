@@ -56,11 +56,18 @@ export class CollectionsService {
     }
   }
 
-  // ... (Garder la méthode findAll inchangée) ...
-  findAll() {
+ // ...
+  // Modifier la signature de findAll
+  findAll(teamId?: string) {
+    // Construction de la requête avec filtre conditionnel
+    const whereCondition = teamId ? { tour: { team_id: teamId } } : {};
+
     return this.repo.find({
+      where: whereCondition, // Applique le filtre si teamId est fourni
       relations: ['client', 'tour', 'tour.team'],
       order: { collected_at: 'DESC' },
+      take: 100,
     });
   }
+  // ...
 }
