@@ -9,21 +9,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Validation Globale
+  // ...
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: false, // <--- METTRE A FALSE (au lieu de true)
-    transform: true,
-    transformOptions: {
-      enableImplicitConversion: true,
-    },
-  }));app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: false, // <--- METTRE A FALSE (au lieu de true)
+    whitelist: true, // Garde uniquement les champs déclarés dans le DTO
+    forbidNonWhitelisted: false, // <--- METTRE A FALSE (C'est souvent 'true' qui cause l'erreur 400)
     transform: true,
     transformOptions: {
       enableImplicitConversion: true,
     },
   }));
+// ...
 
   // CORS
   app.enableCors({
