@@ -1,4 +1,4 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -59,14 +59,34 @@ export class ClientsService {
     return this.clientsRepository.findOneBy({ id });
   }
 
-  update(id: string, updateClientDto: UpdateClientDto) {
-    return this.clientsRepository.update(id, updateClientDto);
-  }
 
   remove(id: string) {
     return this.clientsRepository.delete(id);
     // Note : Comme nous avons ajouté @DeleteDateColumn dans l'entité, 
     // .delete(id) effectuera automatiquement un "Soft Delete" (mettra à jour deleted_at)
     // au lieu de supprimer la ligne physiquement. C'est géré par TypeORM.
+  }
+ async update(id: string, updateClientDto: UpdateClientDto) {
+    // 1. "Preload" fusionne les nouvelles données avec l'existant
+    const client = await this.clientsRepository.preload({
+      id: id,
+      ...updateClientDto,
+    });
+
+    // 2. Si le client n'existe pas
+    if (!client) {
+      throw new NotFoundException(`Client #${id} introuvable`);
+    }
+
+    try {
+      // 3. On sauvegarde (C'est mieux que update() pour PostGIS)
+      return await this.clientsRepository.save(client);
+    } catch (error: any) {
+      // 4. Gestion des doublons (Si on modifie le numéro vers un numéro déjà pris)
+      if (error.code === '23505') {
+        throw new ConflictException('Ce numéro de téléphone est déjà utilisé par un autre client.');
+      }
+      throw error; // Laisse passer les autres erreurs (500)
+    }
   }
 }
