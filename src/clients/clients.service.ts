@@ -4,92 +4,67 @@ import { Repository } from 'typeorm';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { Client } from './entities/client.entity';
-import { Tour } from '../tours/entities/tour.entity';
+
 @Injectable()
 export class ClientsService {
   constructor(
     @InjectRepository(Client)
     private clientsRepository: Repository<Client>,
-    @InjectRepository(Tour) private toursRepository: Repository<Tour>,
   ) {}
 
-  // ... injections de Client, Tour, TourClient ...
-
-  async findAvailableForDate(date: string) {
-    // Sous-requête pour trouver les clients dans une tournée à cette date
-    // Note: C'est une requête un peu complexe, on va utiliser le QueryBuilder
-    return this.clientsRepository.createQueryBuilder('client')
-      .where('client.status = :status', { status: 'ACTIVE' })
-      .andWhere(qb => {
-        const subQuery = qb.subQuery()
-          .select('tc.client_id')
-          .from('tour_clients', 'tc')
-          .innerJoin('tours', 't', 't.id = tc.tour_id')
-          .where('t.tour_date = :date', { date })
-          .getQuery();
-        return 'client.id NOT IN ' + subQuery;
-      })
-      .getMany();
-  }
-
   async create(createClientDto: CreateClientDto) {
-    // 1. Préparer l'entité
     const client = this.clientsRepository.create(createClientDto);
-
     try {
-      // 2. Tenter de sauvegarder dans la base de données
       return await this.clientsRepository.save(client);
     } catch (error: any) {
-      // 3. Intercepter l'erreur de contrainte d'unicité (PostgreSQL code 23505)
       if (error.code === '23505') {
-        throw new ConflictException('Ce numéro de téléphone est déjà utilisé par un autre client.');
+        throw new ConflictException('Ce numéro de téléphone est déjà utilisé.');
       }
-      // Si c'est une autre erreur, on la laisse remonter (Crash 500 normal)
       throw error;
     }
   }
 
   findAll() {
     return this.clientsRepository.find({
-      order: { created_at: 'DESC' } // On trie par les plus récents
+      order: { created_at: 'DESC' }
     });
   }
 
-  findOne(id: string) {
-    return this.clientsRepository.findOneBy({ id });
+  async findOne(id: string) {
+    const client = await this.clientsRepository.findOneBy({ id });
+    if (!client) throw new NotFoundException(`Client #${id} introuvable`);
+    return client;
   }
 
-
-  remove(id: string) {
-    return this.clientsRepository.delete(id);
-    // Note : Comme nous avons ajouté @DeleteDateColumn dans l'entité, 
-    // .delete(id) effectuera automatiquement un "Soft Delete" (mettra à jour deleted_at)
-    // au lieu de supprimer la ligne physiquement. C'est géré par TypeORM.
-  }
- // ... imports
-  
-  // Remplacer la méthode update par celle-ci :
+  // --- CORRECTION UPDATE (Méthode Manuelle Infaillible) ---
   async update(id: string, updateClientDto: UpdateClientDto) {
-    // 1. On cherche d'abord le client existant
-    const existingClient = await this.clientsRepository.findOneBy({ id });
+    // 1. On récupère
+    const client = await this.findOne(id);
 
-    if (!existingClient) {
-      throw new NotFoundException(`Client #${id} introuvable`);
-    }
-
-    // 2. On fusionne les nouvelles données dans l'existant
-    // La méthode merge de TypeORM gère intelligemment les champs partiels
-    this.clientsRepository.merge(existingClient, updateClientDto);
+    // 2. On met à jour manuellement les champs simples
+    // Cela évite les bugs de fusion avec l'objet Location complexe
+    Object.assign(client, updateClientDto);
 
     try {
-      // 3. On sauvegarde le résultat fusionné
-      return await this.clientsRepository.save(existingClient);
+      // 3. On sauvegarde
+      return await this.clientsRepository.save(client);
     } catch (error: any) {
-      // Gestion doublon numéro de téléphone
       if (error.code === '23505') {
-        throw new ConflictException('Ce numéro de téléphone est déjà utilisé par un autre client.');
+        throw new ConflictException('Ce numéro de téléphone est déjà utilisé.');
       }
       throw error;
     }
+  }
+
+  // --- CORRECTION DELETE (Soft Delete) ---
+  async remove(id: string) {
+    // Au lieu de .delete() qui essaie de détruire la ligne (et échoue à cause des liens),
+    // on utilise .softDelete() qui met juste à jour la date 'deleted_at'.
+    const result = await this.clientsRepository.softDelete(id);
+    
+    if (result.affected === 0) {
+      throw new NotFoundException(`Client #${id} introuvable`);
+    }
+    return result;
   }
 }
