@@ -12,6 +12,7 @@ export class ClientsService {
     private clientsRepository: Repository<Client>,
   ) {}
 
+  // 1. CRÉATION
   async create(createClientDto: CreateClientDto) {
     const client = this.clientsRepository.create(createClientDto);
     try {
@@ -24,6 +25,7 @@ export class ClientsService {
     }
   }
 
+  // 2. LECTURE
   findAll() {
     return this.clientsRepository.find({
       order: { created_at: 'DESC' }
@@ -36,17 +38,31 @@ export class ClientsService {
     return client;
   }
 
-  // --- CORRECTION UPDATE (Méthode Manuelle Infaillible) ---
-  async update(id: string, updateClientDto: UpdateClientDto) {
-    // 1. On récupère
-    const client = await this.findOne(id);
+  // 3. DISPONIBILITÉ (C'est la méthode qui manquait !)
+  async findAvailableForDate(date: string) {
+    return this.clientsRepository.createQueryBuilder('client')
+      .where('client.status = :status', { status: 'ACTIVE' })
+      .andWhere(qb => {
+        // On exclut les clients déjà planifiés ce jour-là dans n'importe quelle tournée
+        const subQuery = qb.subQuery()
+          .select('tc.client_id')
+          .from('tour_clients', 'tc')
+          .innerJoin('tours', 't', 't.id = tc.tour_id')
+          .where('t.tour_date = :date', { date })
+          .getQuery();
+        return 'client.id NOT IN ' + subQuery;
+      })
+      .getMany();
+  }
 
-    // 2. On met à jour manuellement les champs simples
-    // Cela évite les bugs de fusion avec l'objet Location complexe
+  // 4. MISE À JOUR (Méthode manuelle robuste)
+  async update(id: string, updateClientDto: UpdateClientDto) {
+    const client = await this.findOne(id);
+    
+    // Fusion manuelle
     Object.assign(client, updateClientDto);
 
     try {
-      // 3. On sauvegarde
       return await this.clientsRepository.save(client);
     } catch (error: any) {
       if (error.code === '23505') {
@@ -56,12 +72,9 @@ export class ClientsService {
     }
   }
 
-  // --- CORRECTION DELETE (Soft Delete) ---
+  // 5. SUPPRESSION (Soft Delete)
   async remove(id: string) {
-    // Au lieu de .delete() qui essaie de détruire la ligne (et échoue à cause des liens),
-    // on utilise .softDelete() qui met juste à jour la date 'deleted_at'.
     const result = await this.clientsRepository.softDelete(id);
-    
     if (result.affected === 0) {
       throw new NotFoundException(`Client #${id} introuvable`);
     }
