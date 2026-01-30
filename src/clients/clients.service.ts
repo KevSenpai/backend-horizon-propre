@@ -38,12 +38,11 @@ export class ClientsService {
     return client;
   }
 
-  // 3. DISPONIBILITÉ (C'est la méthode qui manquait !)
+  // 3. DISPONIBILITÉ
   async findAvailableForDate(date: string) {
     return this.clientsRepository.createQueryBuilder('client')
       .where('client.status = :status', { status: 'ACTIVE' })
       .andWhere(qb => {
-        // On exclut les clients déjà planifiés ce jour-là dans n'importe quelle tournée
         const subQuery = qb.subQuery()
           .select('tc.client_id')
           .from('tour_clients', 'tc')
@@ -55,15 +54,18 @@ export class ClientsService {
       .getMany();
   }
 
-  // 4. MISE À JOUR (Méthode manuelle robuste)
+  // 4. MISE À JOUR (Correction : Utilisation de .update() direct)
   async update(id: string, updateClientDto: UpdateClientDto) {
-    const client = await this.findOne(id);
-    
-    // Fusion manuelle
-    Object.assign(client, updateClientDto);
+    // On vérifie d'abord que le client existe
+    await this.findOne(id);
 
     try {
-      return await this.clientsRepository.save(client);
+      // L'instruction update génère une requête SQL directe, 
+      // ce qui évite les problèmes de conversion d'objets GeoJSON complexes en mémoire.
+      await this.clientsRepository.update(id, updateClientDto);
+      
+      // On retourne le client mis à jour
+      return this.findOne(id);
     } catch (error: any) {
       if (error.code === '23505') {
         throw new ConflictException('Ce numéro de téléphone est déjà utilisé.');
