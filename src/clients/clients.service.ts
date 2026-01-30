@@ -60,16 +60,18 @@ export class ClientsService {
     await this.findOne(id);
 
     // On sépare la location (GPS) des autres champs
+    // On utilise la destructuration pour isoler 'location'
     const { location, ...simpleFields } = updateClientDto;
 
     try {
       // A. Si on a des champs texte à modifier (Nom, Tel...), on utilise l'ORM standard
+      // .update() est plus sûr que .save() car il ne touche pas aux colonnes non mentionnées
       if (Object.keys(simpleFields).length > 0) {
         await this.clientsRepository.update(id, simpleFields);
       }
 
       // B. Si on a une modification GPS, on utilise du SQL PUR pour PostGIS
-      // C'est la seule façon d'éviter les erreurs de parsing GeoJSON/Binaire
+      // C'est la seule façon d'éviter les erreurs de parsing GeoJSON/Binaire de TypeORM
       if (location) {
         await this.clientsRepository.query(
           `UPDATE clients 
@@ -80,7 +82,7 @@ export class ClientsService {
         );
       }
       
-      // On retourne le client mis à jour
+      // On retourne le client mis à jour pour que le frontend ait la nouvelle version
       return this.findOne(id);
 
     } catch (error: any) {
