@@ -54,18 +54,35 @@ export class ClientsService {
       .getMany();
   }
 
-  // 4. MISE À JOUR (Correction : Utilisation de .update() direct)
+  // 4. MISE À JOUR (VERSION BLINDÉE SQL)
   async update(id: string, updateClientDto: UpdateClientDto) {
-    // On vérifie d'abord que le client existe
+    // On vérifie que le client existe
     await this.findOne(id);
 
+    // On sépare la location (GPS) des autres champs
+    const { location, ...simpleFields } = updateClientDto;
+
     try {
-      // L'instruction update génère une requête SQL directe, 
-      // ce qui évite les problèmes de conversion d'objets GeoJSON complexes en mémoire.
-      await this.clientsRepository.update(id, updateClientDto);
+      // A. Si on a des champs texte à modifier (Nom, Tel...), on utilise l'ORM standard
+      if (Object.keys(simpleFields).length > 0) {
+        await this.clientsRepository.update(id, simpleFields);
+      }
+
+      // B. Si on a une modification GPS, on utilise du SQL PUR pour PostGIS
+      // C'est la seule façon d'éviter les erreurs de parsing GeoJSON/Binaire
+      if (location) {
+        await this.clientsRepository.query(
+          `UPDATE clients 
+           SET location = ST_SetSRID(ST_GeomFromGeoJSON($1), 4326),
+               location_status = 'VERIFIED'
+           WHERE id = $2`,
+          [JSON.stringify(location), id]
+        );
+      }
       
       // On retourne le client mis à jour
       return this.findOne(id);
+
     } catch (error: any) {
       if (error.code === '23505') {
         throw new ConflictException('Ce numéro de téléphone est déjà utilisé.');
