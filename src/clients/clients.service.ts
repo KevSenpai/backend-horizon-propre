@@ -66,27 +66,30 @@ export class ClientsService {
     // .delete(id) effectuera automatiquement un "Soft Delete" (mettra à jour deleted_at)
     // au lieu de supprimer la ligne physiquement. C'est géré par TypeORM.
   }
- async update(id: string, updateClientDto: UpdateClientDto) {
-    // 1. "Preload" fusionne les nouvelles données avec l'existant
-    const client = await this.clientsRepository.preload({
-      id: id,
-      ...updateClientDto,
-    });
+ // ... imports
+  
+  // Remplacer la méthode update par celle-ci :
+  async update(id: string, updateClientDto: UpdateClientDto) {
+    // 1. On cherche d'abord le client existant
+    const existingClient = await this.clientsRepository.findOneBy({ id });
 
-    // 2. Si le client n'existe pas
-    if (!client) {
+    if (!existingClient) {
       throw new NotFoundException(`Client #${id} introuvable`);
     }
 
+    // 2. On fusionne les nouvelles données dans l'existant
+    // La méthode merge de TypeORM gère intelligemment les champs partiels
+    this.clientsRepository.merge(existingClient, updateClientDto);
+
     try {
-      // 3. On sauvegarde (C'est mieux que update() pour PostGIS)
-      return await this.clientsRepository.save(client);
+      // 3. On sauvegarde le résultat fusionné
+      return await this.clientsRepository.save(existingClient);
     } catch (error: any) {
-      // 4. Gestion des doublons (Si on modifie le numéro vers un numéro déjà pris)
+      // Gestion doublon numéro de téléphone
       if (error.code === '23505') {
         throw new ConflictException('Ce numéro de téléphone est déjà utilisé par un autre client.');
       }
-      throw error; // Laisse passer les autres erreurs (500)
+      throw error;
     }
   }
 }
