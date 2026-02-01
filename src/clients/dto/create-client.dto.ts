@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsEnum, IsArray, IsOptional, IsEmail } from 'class-validator';
 import { ClientType, ServiceType, CollectionDay, GeoStatus } from '../entities/client.entity';
-
+import { Transform } from 'class-transformer';
 export class CreateClientDto {
   @IsString()
   @IsNotEmpty()
@@ -12,6 +12,7 @@ export class CreateClientDto {
 
   @IsOptional()
   @IsEmail()
+  @Transform(({ value }) => value === '' ? null : value)
   email?: string;
 
   @IsString()
