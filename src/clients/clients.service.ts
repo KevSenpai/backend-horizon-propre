@@ -39,20 +39,31 @@ export class ClientsService {
   }
 
   // 3. DISPONIBILITÉ
-  async findAvailableForDate(date: string) {
+  // ...
+  async findAvailableForDate(dateStr: string) {
+    const date = new Date(dateStr);
+    const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const dayName = days[date.getDay()]; // ex: "MONDAY"
+
     return this.clientsRepository.createQueryBuilder('client')
       .where('client.status = :status', { status: 'ACTIVE' })
+      // Règle 1 : Le client doit avoir ce jour dans son contrat
+      .andWhere(':day = ANY(client.collection_days)', { day: dayName })
+      // Règle 2 : Le client doit avoir une position GPS valide
+      .andWhere('client.location_status = :geoStatus', { geoStatus: 'VERIFIED' })
+      // Règle 3 : Le client ne doit pas être déjà pris ce jour-là
       .andWhere(qb => {
         const subQuery = qb.subQuery()
           .select('tc.client_id')
           .from('tour_clients', 'tc')
           .innerJoin('tours', 't', 't.id = tc.tour_id')
-          .where('t.tour_date = :date', { date })
+          .where('t.tour_date = :date', { date: dateStr })
           .getQuery();
         return 'client.id NOT IN ' + subQuery;
       })
       .getMany();
   }
+  // ...
 
   // 4. MISE À JOUR (VERSION BLINDÉE SQL)
   async update(id: string, updateClientDto: UpdateClientDto) {
